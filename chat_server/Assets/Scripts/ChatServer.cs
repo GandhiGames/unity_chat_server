@@ -67,6 +67,16 @@ namespace Chat
 					}
 
 				}
+
+				for (int i = 0; i > disconnectedClients.Count; i++) {
+
+					string name = disconnectedClients [i].name;
+					serverClients.Remove (disconnectedClients [i]);
+					disconnectedClients.RemoveAt (i);
+
+					Broadcast (name + " has disconnected", serverClients);
+
+				}
 			}
 		}
 
@@ -82,14 +92,24 @@ namespace Chat
 			serverClients.Add (new ServerClient (lis.EndAcceptTcpClient (ar)));
 
 			StartListening ();
-
-			Broadcast (serverClients [serverClients.Count - 1].name + " has connected", serverClients);
 		}
 
 		private void OnInComingData (ServerClient client, string data)
 		{
-			Broadcast (data, serverClients);
-			
+			Message incoming = Message.FromSerialized (data);
+
+			if (!incoming.CanBeProcessed()) {
+				return;
+			}
+
+			if (incoming.type == MessageType.Name) {
+				serverClients [serverClients.Count - 1].name = incoming.data.ToString();
+
+				Broadcast (serverClients [serverClients.Count - 1].name + " has connected", serverClients);
+			} else if(incoming.type == MessageType.Data) {
+
+				Broadcast (incoming.data.ToString(), serverClients);
+			}
 		}
 
 		private void Broadcast (string data, List<ServerClient> clients)
