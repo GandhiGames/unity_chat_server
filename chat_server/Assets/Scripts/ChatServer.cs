@@ -47,7 +47,7 @@ namespace Chat
 
 				foreach (var client in serverClients) {
 
-					if (IsConnected (client.tcp)) {
+					if (client.tcp.IsConnected ()) {
 
 						NetworkStream stream = client.tcp.GetStream ();
 
@@ -82,30 +82,27 @@ namespace Chat
 			serverClients.Add (new ServerClient (lis.EndAcceptTcpClient (ar)));
 
 			StartListening ();
-		}
 
-		private bool IsConnected (TcpClient tcp)
-		{
-			try {
-				if (tcp != null && tcp.Client != null && tcp.Client.Connected) {
-					if (tcp.Client.Poll (0, SelectMode.SelectRead)) {
-						return !(tcp.Client.Receive (new byte[1], SocketFlags.Peek) == 0);
-					}
-
-					return true;
-				}
-
-			} catch (Exception) {
-				return false;
-			}
-
-			return false;
+			Broadcast (serverClients [serverClients.Count - 1].name + " has connected", serverClients);
 		}
 
 		private void OnInComingData (ServerClient client, string data)
 		{
-			Console.WriteLine ("client={0}, data={1}", client.name, data);
+			Broadcast (data, serverClients);
 			
+		}
+
+		private void Broadcast (string data, List<ServerClient> clients)
+		{
+			foreach (var client in clients) {
+				try {
+					StreamWriter writer = new StreamWriter(client.tcp.GetStream());
+					writer.WriteLine(data);
+					writer.Flush();
+				} catch (Exception e) {
+					Debug.Log (e);
+				}
+			}
 		}
 	}
 
@@ -114,7 +111,7 @@ namespace Chat
 		public TcpClient tcp;
 		public string name;
 
-		public ServerClient (TcpClient tcp) : this (tcp, "Client")
+		public ServerClient (TcpClient tcp) : this (tcp, "Guest")
 		{
 		}
 
